@@ -1,6 +1,6 @@
 -- | The Conduit homepage allows users to explore articles in several ways: in a personalized feed,
 -- | by tag, or by viewing all articles.
-module RoutingPOC.Page.Home where
+module RoutingPOC.Page.Inner where
 
 import Prelude
 import Component.HigherOrder.Connect as Connect
@@ -61,8 +61,8 @@ component =
   render :: forall slots. State -> H.ComponentHTML Action slots m
   render state@{ currentUser } =
     HH.div_
-      [ HH.h2_ [ HH.text "Home page" ]
+      [ HH.h2_ [ HH.text "Inner page" ]
       , HH.ul_
-          [ HH.button [ HE.onClick \_ -> Just $ NavigateTo Inner ] [ HH.text "Go to inner page" ]
+          [ HH.button [ HE.onClick \_ -> Just $ NavigateTo Home ] [ HH.text "Go to home page" ]
           ]
       ]

@@ -6,7 +6,6 @@
 module RoutingPOC.Component.Router where
 
 import Prelude
-
 import Component.HigherOrder.Connect (WithCurrentUser)
 import Component.HigherOrder.Connect as Connect
 import RoutingPOC.Capability.LogMessages (class LogMessages)
@@ -17,6 +16,7 @@ import RoutingPOC.Data.Profile (Profile)
 import RoutingPOC.Data.Route (Route(..), routeCodec)
 import RoutingPOC.Env (UserEnv)
 import RoutingPOC.Page.Home as Home
+import RoutingPOC.Page.Inner as Inner
 import Control.Monad.Reader (class MonadAsk)
 import Data.Either (hush)
 import Data.Foldable (elem)
@@ -29,10 +29,10 @@ import Halogen.HTML as HH
 import Routing.Duplex as RD
 import Routing.Hash (getHash)
 
-type State =
-  { route :: Maybe Route
-  , currentUser :: Maybe Profile
-  }
+type State
+  = { route :: Maybe Route
+    , currentUser :: Maybe Profile
+    }
 
 data Query a
   = Navigate Route a
@@ -41,32 +41,37 @@ data Action
   = Initialize
   | Receive { | WithCurrentUser () }
 
-type ChildSlots =
-  ( home :: OpaqueSlot Unit
-  , login :: OpaqueSlot Unit
-  , register :: OpaqueSlot Unit
-  , settings :: OpaqueSlot Unit
-  , profile :: OpaqueSlot Unit
-  )
+type ChildSlots
+  = ( home :: OpaqueSlot Unit
+    , inner :: OpaqueSlot Unit
+    , login :: OpaqueSlot Unit
+    , register :: OpaqueSlot Unit
+    , settings :: OpaqueSlot Unit
+    , profile :: OpaqueSlot Unit
+    )
 
-component
-  :: forall m r
-   . MonadAff m
-  => MonadAsk { userEnv :: UserEnv | r } m
-  => Now m
-  => LogMessages m
-  => Navigate m
-  => H.Component HH.HTML Query {} Void m
-component = Connect.component $ H.mkComponent
-  { initialState: \{ currentUser } -> { route: Nothing, currentUser }
-  , render
-  , eval: H.mkEval $ H.defaultEval
-      { handleQuery = handleQuery
-      , handleAction = handleAction
-      , receive = Just <<< Receive
-      , initialize = Just Initialize
-      }
-  }
+component ::
+  forall m r.
+  MonadAff m =>
+  MonadAsk { userEnv :: UserEnv | r } m =>
+  Now m =>
+  LogMessages m =>
+  Navigate m =>
+  H.Component HH.HTML Query {} Void m
+component =
+  Connect.component
+    $ H.mkComponent
+        { initialState: \{ currentUser } -> { route: Nothing, currentUser }
+        , render
+        , eval:
+            H.mkEval
+              $ H.defaultEval
+                  { handleQuery = handleQuery
+                  , handleAction = handleAction
+                  , receive = Just <<< Receive
+                  , initialize = Just Initialize
+                  }
+        }
   where
   handleAction :: Action -> H.HalogenM State Action ChildSlots Void m Unit
   handleAction = case _ of
@@ -75,9 +80,7 @@ component = Connect.component $ H.mkComponent
       initialRoute <- hush <<< (RD.parse routeCodec) <$> liftEffect getHash
       -- then we'll navigate to the new route (also setting the hash)
       navigate $ fromMaybe Home initialRoute
-
-    Receive { currentUser } ->
-      H.modify_ _ { currentUser = currentUser }
+    Receive { currentUser } -> H.modify_ _ { currentUser = currentUser }
 
   handleQuery :: forall a. Query a -> H.HalogenM State Action ChildSlots Void m (Maybe a)
   handleQuery = case _ of
@@ -96,22 +99,16 @@ component = Connect.component $ H.mkComponent
   -- way to restrict access.
   authorize :: Maybe Profile -> H.ComponentHTML Action ChildSlots m -> H.ComponentHTML Action ChildSlots m
   authorize mbProfile html = case mbProfile of
-    Nothing ->
-      -- HH.slot (SProxy :: _ "login") unit Login.component { redirect: false } absurd
+    Nothing -> -- HH.slot (SProxy :: _ "login") unit Login.component { redirect: false } absurd
       html
-    Just _ ->
-      html
+    Just _ -> html
 
   render :: State -> H.ComponentHTML Action ChildSlots m
   render { route, currentUser } = case route of
     Just r -> case r of
-      Home ->
-        HH.slot (SProxy :: _ "home") unit Home.component {} absurd
-      Login ->
-        HH.slot (SProxy :: _ "home") unit Home.component {} absurd
-      Register ->
-        HH.slot (SProxy :: _ "home") unit Home.component {} absurd
-      Settings ->
-        HH.slot (SProxy :: _ "home") unit Home.component {} absurd
-    Nothing ->
-      HH.div_ [ HH.text "Oh no! That page wasn't found." ]
+      Home -> HH.slot (SProxy :: _ "home") unit Home.component {} absurd
+      Inner -> HH.slot (SProxy :: _ "inner") unit Inner.component {} absurd
+      Login -> HH.slot (SProxy :: _ "home") unit Home.component {} absurd
+      Register -> HH.slot (SProxy :: _ "home") unit Home.component {} absurd
+      Settings -> HH.slot (SProxy :: _ "home") unit Home.component {} absurd
+    Nothing -> HH.div_ [ HH.text "Oh no! That page wasn't found." ]

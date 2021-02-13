@@ -12,7 +12,6 @@
 module RoutingPOC.Data.Route where
 
 import Prelude hiding ((/))
-
 import Data.Either (note)
 import Data.Generic.Rep (class Generic)
 import RoutingPOC.Data.Username (Username)
@@ -27,12 +26,15 @@ import Routing.Duplex.Generic.Syntax ((/))
 -- | to send users to non-existent routes.
 data Route
   = Home
+  | Inner
   | Login
   | Register
   | Settings
-  
+
 derive instance genericRoute :: Generic Route _
+
 derive instance eqRoute :: Eq Route
+
 derive instance ordRoute :: Ord Route
 
 -- | Next, we'll define a bidirectional codec for our route parsing. Our single codec will handle
@@ -42,14 +44,17 @@ derive instance ordRoute :: Ord Route
 -- |
 -- | Our codec will cause a compile-time error if we fail to handle any of our route cases.
 routeCodec :: RouteDuplex' Route
-routeCodec = root $ sum
-  { "Home": noArgs
-  , "Login": "login" / noArgs
-  , "Register": "register" / noArgs
-  , "Settings": "settings" / noArgs
-  , "Profile": "profile" / uname segment
-  , "Favorites": "profile" / uname segment / "favorites"
-  }
+routeCodec =
+  root
+    $ sum
+        { "Home": noArgs
+        , "Inner": "inner" / noArgs
+        , "Login": "login" / noArgs
+        , "Register": "register" / noArgs
+        , "Settings": "settings" / noArgs
+        , "Profile": "profile" / uname segment
+        , "Favorites": "profile" / uname segment / "favorites"
+        }
 
 -- | This combinator transforms a codec over `String` into one that operates on the `Username` type.
 uname :: RouteDuplex' String -> RouteDuplex' Username
